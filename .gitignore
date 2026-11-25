@@ -1,0 +1,28 @@
+# Gradle and Android Studio
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.kotlin/
+captures/
+.cxx/
+
+# Signing
+*.jks
+*.keystore
+keystore.properties
+
+# Firebase: each build uses its own project, see docs/firebase-setup.md
+app/google-services.json
+firebase/.firebaserc
+firebase/functions/node_modules/
+firebase/test/node_modules/
+*-debug.log
+.DS_Store
+
+# Python (Raspberry Pi monitor)
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/

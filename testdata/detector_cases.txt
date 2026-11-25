@@ -1,0 +1,53 @@
+# Shared test cases for the sound event detector.
+#
+# The Android app (EventDetector.kt) and the Raspberry Pi monitor (detector.py) must
+# both produce exactly these events, so the two implementations cannot drift apart.
+#
+#   case    name of the case
+#   config  optional overrides, as key=value pairs using the Python field names
+#   frames  levels in dBFS as LEVELxCOUNT; every frame is 50 ms and time starts at 0
+#   expect  one line per expected event: start_ms duration_ms peak_db
+#
+# The detector is flushed after the last frame.
+
+case single short bark
+frames -70x40 -20x4 -70x60
+expect 2000 200 -20
+
+case one loud frame is too short to count
+frames -70x40 -20x1 -70x60
+
+case barks close together are one event
+frames -70x40 -20x4 -70x20 -15x4 -70x60
+expect 2000 1400 -15
+
+case barks far apart are separate events
+frames -70x40 -20x4 -70x50 -15x4 -70x60
+expect 2000 200 -20
+expect 4700 200 -15
+
+case sounds under the minimum level are ignored
+frames -70x40 -55x10 -70x40
+
+case a noisy room raises the threshold
+frames -40x400 -30x10 -40x20 -15x4 -40x60
+expect 21500 200 -15
+
+case long noise is split into several events
+config max_event_ms=1000 hold_ms=200
+frames -70x20 -20x50 -70x20
+expect 1000 1000 -20
+expect 2000 1000 -20
+expect 3000 500 -20
+
+case stopping ends the event in progress
+frames -70x20 -20x10
+expect 1000 500 -20
+
+case high sensitivity catches a sound just above the room
+config margin_db=8
+frames -45x200 -35x4 -45x60
+expect 10000 200 -35
+
+case default sensitivity ignores that same sound
+frames -45x200 -35x4 -45x60
