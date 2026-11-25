@@ -25,11 +25,26 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        // Release signing is read from the environment, so no key ever lives in the repository.
+        // See docs/releasing.md. Without it, release builds fall back to the debug key.
+        val keystore = System.getenv("PETCHECK_KEYSTORE_FILE")
+        if (!keystore.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(keystore)
+                storePassword = System.getenv("PETCHECK_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("PETCHECK_KEY_ALIAS")
+                keyPassword = System.getenv("PETCHECK_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Not minified yet: code shrinking has to be checked on a real device first, because
+            // the sound classifier is loaded through JNI and Firebase through reflection.
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 
@@ -45,6 +60,21 @@ android {
 
     androidResources {
         noCompress += "tflite"
+    }
+
+    lint {
+        // targetSdk stays one release behind compileSdk until the app has been run on that release.
+        disable += "OldTargetApi"
+        warningsAsErrors = true
+        abortOnError = true
+    }
+
+    testOptions {
+        unitTests {
+            // The screenshot tests render real Compose screens on the JVM with Robolectric.
+            isIncludeAndroidResources = true
+            all { it.systemProperty("roborazzi.test.record", "true") }
+        }
     }
 }
 
@@ -82,4 +112,10 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

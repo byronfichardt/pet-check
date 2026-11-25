@@ -17,6 +17,10 @@ class FormatTest {
         assertEquals("3 min 20 s", Format.duration(200_000))
         assertEquals("2 min", Format.duration(120_000))
         assertEquals("1 h 12 min", Format.duration(4_320_000))
+        assertEquals("45 s", Format.compactDuration(45_000))
+        assertEquals("12m 25s", Format.compactDuration(745_000))
+        assertEquals("2m", Format.compactDuration(120_000))
+        assertEquals("1h 12m", Format.compactDuration(4_320_000))
     }
 
     @Test

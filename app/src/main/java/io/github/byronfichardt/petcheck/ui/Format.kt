@@ -26,6 +26,16 @@ object Format {
         }
     }
 
+    /** A shorter form for tight spaces: "45 s", "12m 25s", "1h 12m". */
+    fun compactDuration(ms: Long): String {
+        val seconds = ms / 1000
+        return when {
+            seconds < 60 -> duration(ms)
+            seconds < 3600 -> if (seconds % 60 == 0L) "${seconds / 60}m" else "${seconds / 60}m ${seconds % 60}s"
+            else -> "${seconds / 3600}h ${seconds % 3600 / 60}m"
+        }
+    }
+
     fun time(epochMs: Long, zone: ZoneId = ZoneId.systemDefault()): String =
         time.format(Instant.ofEpochMilli(epochMs).atZone(zone))
 

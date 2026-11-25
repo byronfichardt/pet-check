@@ -169,7 +169,7 @@ fun HistoryContent(
                 )
                 StackedBarChart(buckets, mode, metric, selected, onSelect = { selected = if (selected == it) null else it }, zone = zone)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SoundColors.STACK_ORDER.reversed().forEach { type ->
+                    SoundType.entries.forEach { type ->
                         if ((summary.countByType[type] ?: 0) > 0) TypeLegendItem(type)
                     }
                 }
@@ -190,7 +190,7 @@ private fun bucketLabel(bucket: HistoryBucket, mode: HistoryMode, zone: ZoneId):
 
 private fun bucketReadout(bucket: HistoryBucket, mode: HistoryMode, metric: HistoryMetric, zone: ZoneId): String {
     val label = bucketLabel(bucket, mode, zone)
-    val parts = SoundColors.STACK_ORDER.reversed().mapNotNull { type ->
+    val parts = SoundType.entries.mapNotNull { type ->
         when (metric) {
             HistoryMetric.TIME -> bucket.msByType[type]?.takeIf { it > 0 }?.let { "${type.label} ${Format.duration(it)}" }
             HistoryMetric.COUNT -> bucket.countByType[type]?.takeIf { it > 0 }?.let { "${type.label} $it" }

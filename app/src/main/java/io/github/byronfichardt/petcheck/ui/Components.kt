@@ -112,8 +112,8 @@ fun RowScope.StatTile(label: String, value: String) {
 fun StatRow(summaryCount: Int, totalMs: Long, longestMs: Long, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatTile("Sounds", summaryCount.toString())
-        StatTile("Noisy time", if (summaryCount == 0) "0 s" else Format.duration(totalMs))
-        StatTile("Longest", if (summaryCount == 0) "–" else Format.duration(longestMs))
+        StatTile("Noisy time", if (summaryCount == 0) "0 s" else Format.compactDuration(totalMs))
+        StatTile("Longest", if (summaryCount == 0) "–" else Format.compactDuration(longestMs))
     }
 }
 
