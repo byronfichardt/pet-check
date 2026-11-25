@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Unit tests, screenshot tests, lint and build
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pet-check-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots-and-reports
+          path: |
+            app/build/outputs/screenshots
+            app/build/reports
+
+  pi:
+    name: Raspberry Pi monitor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libportaudio2
+          pip install -e pi
+      - name: Unit tests
+        run: python -m unittest discover -s tests
+        working-directory: pi
+
+  firebase:
+    name: Firebase rules and function
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: firebase/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libportaudio2
+          pip install -e pi
+          npm ci --prefix firebase
+      - name: Security rules against the Firestore emulator
+        run: npm test
+        working-directory: firebase
+      - name: Pi monitor end to end against the emulators
+        run: npm run test:pi
+        working-directory: firebase
+      - name: Cloud Function
+        run: npm test
+        working-directory: firebase/functions

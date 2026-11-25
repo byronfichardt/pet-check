@@ -149,6 +149,17 @@ def main(argv: list[str] | None = None) -> int:
     except FileNotFoundError as error:
         log.error("%s", error)
         return 2
+    except OSError as error:
+        if "PortAudio" in str(error):
+            log.error("The PortAudio library is missing. Install it with: sudo apt install libportaudio2")
+            return 2
+        raise
+    except Exception as error:
+        # sounddevice reports a missing or busy microphone with its own exception type.
+        if type(error).__name__ == "PortAudioError":
+            log.error("Could not open the microphone: %s. Check `petcheck-pi devices`.", error)
+            return 2
+        raise
 
 
 if __name__ == "__main__":
