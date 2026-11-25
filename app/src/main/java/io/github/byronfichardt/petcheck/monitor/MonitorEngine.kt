@@ -107,6 +107,10 @@ class MonitorEngine(private val context: Context, private val listener: Listener
             } catch (e: Exception) {
                 Log.e(TAG, "Sound classifier unavailable", e)
                 null
+            } catch (e: LinkageError) {
+                // The native library is missing for this device's processor.
+                Log.e(TAG, "Sound classifier unavailable", e)
+                null
             }
             classifierReady = classifier != null
             val pipeline = MonitorPipeline(classifier, mapper, pendingConfig ?: DetectorConfig())
