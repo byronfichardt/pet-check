@@ -1,0 +1,73 @@
+rules_version = '2';
+
+// Each signed-in user can read and write only their own data:
+//
+//   users/{uid}/devices/{deviceId}   one per phone, tablet or Raspberry Pi
+//   users/{uid}/events/{eventId}     one per detected sound (metadata only, never audio)
+//   users/{uid}/alerts/{alertId}     raised by a monitor, pushed to the user's other devices
+//
+// Everything else is denied. Tests: firebase/test/rules.test.js
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function isSoundType(value) {
+      return value in ['bark', 'howl', 'whine', 'growl', 'meow', 'other'];
+    }
+
+    function validEvent(d) {
+      let fields = ['deviceId', 'deviceName', 'startedAt', 'durationMs', 'type', 'peakDb', 'confidence', 'syncedAt'];
+      return d.keys().hasOnly(fields) && d.keys().hasAll(fields)
+        && d.deviceId is string && d.deviceId.size() > 0 && d.deviceId.size() <= 64
+        && d.deviceName is string && d.deviceName.size() <= 60
+        && d.startedAt is timestamp
+        && d.durationMs is int && d.durationMs >= 0 && d.durationMs <= 600000
+        && isSoundType(d.type)
+        && d.peakDb is number && d.peakDb >= -100 && d.peakDb <= 1
+        && d.confidence is number && d.confidence >= 0 && d.confidence <= 1
+        // Viewers sync by this field, so it has to be the real server time.
+        && d.syncedAt == request.time;
+    }
+
+    function validDevice(d) {
+      return d.keys().hasOnly(['name', 'platform', 'model', 'appVersion', 'monitoring', 'monitoringSince', 'lastSeen', 'fid'])
+        && (!('name' in d) || (d.name is string && d.name.size() <= 60))
+        && (!('platform' in d) || (d.platform is string && d.platform.size() <= 20))
+        && (!('model' in d) || (d.model is string && d.model.size() <= 80))
+        && (!('appVersion' in d) || (d.appVersion is string && d.appVersion.size() <= 20))
+        && (!('monitoring' in d) || d.monitoring is bool)
+        && (!('monitoringSince' in d) || d.monitoringSince is timestamp)
+        && (!('lastSeen' in d) || d.lastSeen is timestamp)
+        && (!('fid' in d) || (d.fid is string && d.fid.size() <= 200));
+    }
+
+    function validAlert(d) {
+      let fields = ['deviceId', 'deviceName', 'createdAt', 'noisySeconds', 'windowMinutes', 'type'];
+      return d.keys().hasOnly(fields) && d.keys().hasAll(fields)
+        && d.deviceId is string && d.deviceId.size() > 0 && d.deviceId.size() <= 64
+        && d.deviceName is string && d.deviceName.size() <= 60
+        && d.createdAt == request.time
+        && d.noisySeconds is int && d.noisySeconds >= 0 && d.noisySeconds <= 86400
+        && d.windowMinutes is int && d.windowMinutes >= 1 && d.windowMinutes <= 1440
+        && isSoundType(d.type);
+    }
+
+    match /users/{uid}/devices/{deviceId} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validDevice(request.resource.data);
+    }
+
+    match /users/{uid}/events/{eventId} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validEvent(request.resource.data);
+    }
+
+    match /users/{uid}/alerts/{alertId} {
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid) && validAlert(request.resource.data);
+    }
+  }
+}

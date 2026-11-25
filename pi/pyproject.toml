@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "petcheck-pi"
+version = "0.1.0"
+description = "Headless Pet Check sound monitor for a Raspberry Pi"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.23.2",
+    "ai-edge-litert>=2.0",
+    "sounddevice>=0.5",
+]
+
+[project.scripts]
+petcheck-pi = "petcheck_pi.__main__:main"
+
+[tool.setuptools]
+packages = ["petcheck_pi"]

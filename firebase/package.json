@@ -1,0 +1,17 @@
+{
+  "name": "petcheck-firebase",
+  "private": true,
+  "description": "Firestore security rules for Pet Check, with their tests.",
+  "license": "MIT",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-petcheck \"node --test test/*.test.js\"",
+    "test:pi": "firebase emulators:exec --only auth,firestore --project demo-petcheck \"python3 ../pi/tests/e2e_emulator.py\"",
+    "deploy": "firebase deploy --only firestore:rules,firestore:indexes",
+    "deploy:functions": "firebase deploy --only functions"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.4.0",
+    "firebase-tools": "^15.37.0"
+  }
+}

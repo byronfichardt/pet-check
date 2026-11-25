@@ -16,8 +16,7 @@ keystore.properties
 # Firebase: each build uses its own project, see docs/firebase-setup.md
 app/google-services.json
 firebase/.firebaserc
-firebase/functions/node_modules/
-firebase/test/node_modules/
+node_modules/
 *-debug.log
 .DS_Store
 

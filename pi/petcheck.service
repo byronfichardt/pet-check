@@ -1,0 +1,21 @@
+# systemd unit for the Pet Check monitor.
+#
+#   mkdir -p ~/.config/systemd/user
+#   cp petcheck.service ~/.config/systemd/user/
+#   systemctl --user enable --now petcheck
+#   sudo loginctl enable-linger $USER     # keep it running when nobody is logged in
+#
+# Adjust ExecStart if the virtual environment lives somewhere else.
+
+[Unit]
+Description=Pet Check sound monitor
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+ExecStart=%h/pet-check/pi/.venv/bin/petcheck-pi run
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
