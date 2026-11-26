@@ -12,7 +12,6 @@ import io.github.byronfichardt.petcheck.data.SoundEvent
 import io.github.byronfichardt.petcheck.data.SoundType
 import io.github.byronfichardt.petcheck.monitor.MonitorService
 import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -41,8 +40,9 @@ class AppSmokeTest {
 
     /**
      * Runs suspending work off the main thread and keeps the main thread turning while it waits.
-     * Blocking the main thread here (with runBlocking) can deadlock: the app's own start-up
-     * coroutines may be part-way through reading settings and need that thread to finish.
+     * Never block the simulated main thread on app state here: the app's own start-up coroutines
+     * need that thread, and the two can deadlock. Settings are tested on their own in
+     * SettingsStoreTest for the same reason.
      */
     private fun <T> await(block: suspend () -> T): T {
         val result = app.container.appScope.async { block() }
@@ -57,11 +57,9 @@ class AppSmokeTest {
         compose.onNodeWithText("Start listening").assertExists()
 
         await {
-            val settings = app.container.settings.current()
-            assertTrue(settings.deviceId.isNotEmpty())
             app.container.events.upsert(
                 listOf(
-                    SoundEvent("e1", settings.deviceId, settings.deviceName, System.currentTimeMillis() - 60_000, 4_200, SoundType.HOWL, -12f, 0.8f),
+                    SoundEvent("e1", "test-device", "Test device", System.currentTimeMillis() - 60_000, 4_200, SoundType.HOWL, -12f, 0.8f),
                 ),
             )
         }
@@ -80,22 +78,6 @@ class AppSmokeTest {
         assertNull(app.container.remote)
         compose.onNodeWithText("Remote viewing").assertExists()
         compose.onNodeWithText("Log other loud sounds").assertExists()
-    }
-
-    @Test
-    fun settingsPersist() {
-        val settings = await {
-            val store = app.container.settings
-            val id = store.current().deviceId
-            store.setSensitivity(80)
-            store.setDeviceName("  Kitchen tablet  ")
-            store.setAlertsEnabled(true)
-            store.settings.first().also { assertEquals(id, it.deviceId) }
-        }
-        assertEquals(80, settings.sensitivity)
-        assertEquals("Kitchen tablet", settings.deviceName)
-        assertEquals(12.4, settings.detectorConfig.marginDb, 1e-9)
-        assertTrue(settings.alertRule.enabled)
     }
 
     @Test
