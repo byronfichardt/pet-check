@@ -77,11 +77,10 @@ jobs:
           script: ./gradlew connectedDebugAndroidTest
       - name: Check that the device tests really ran
         run: |
-          ran=0
-          for file in $(find app/build/outputs/androidTest-results -name 'TEST-*.xml'); do
-            count=$(grep -o '<testsuite[^>]* tests="[0-9]*"' "$file" | grep -o 'tests="[0-9]*"' | grep -o '[0-9]*' | head -1)
-            ran=$((ran + ${count:-0}))
-          done
+          # Result file names contain spaces, so let find hand them to grep directly.
+          ran=$(find app/build/outputs/androidTest-results -name 'TEST-*.xml' \
+            -exec grep -ho '<testsuite[^>]* tests="[0-9]*"' {} + \
+            | grep -o 'tests="[0-9]*"' | grep -o '[0-9]*' | awk '{ total += $1 } END { print total + 0 }')
           echo "Device tests run on Android ${{ matrix.android }}: $ran" | tee -a "$GITHUB_STEP_SUMMARY"
           # A build that silently runs no tests must not pass.
           test "$ran" -ge 5
