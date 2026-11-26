@@ -83,6 +83,8 @@ android {
     lint {
         // targetSdk stays one release behind compileSdk until the app has been run on that release.
         disable += "OldTargetApi"
+        // A library publishing a new version must not turn a passing build red.
+        disable += listOf("GradleDependency", "AndroidGradlePluginVersion", "NewerVersionAvailable")
         warningsAsErrors = true
         abortOnError = true
     }
