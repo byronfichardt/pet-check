@@ -44,6 +44,8 @@ data class MonitorState(
     /** False if the sound classifier failed to load: events are then all stored as "other". */
     val classifierReady: Boolean = true,
     val eventsThisSession: Int = 0,
+    /** Audio frames received since listening started: proof that the microphone is delivering. */
+    val framesHeard: Long = 0,
     val error: String? = null,
 )
 
@@ -125,6 +127,7 @@ class MonitorService : Service(), MonitorEngine.Listener {
         if (++frameCount % 2 != 0) return
         container.monitorState.update {
             it.copy(
+                framesHeard = frameCount.toLong(),
                 levelDb = levelDb.toFloat(),
                 thresholdDb = thresholdDb.toFloat(),
                 hearing = active,

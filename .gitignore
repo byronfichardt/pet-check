@@ -11,6 +11,8 @@ captures/
 # Signing
 *.jks
 *.keystore
+# The shared debug key is public on purpose: see app/build.gradle.kts
+!/debug.keystore
 keystore.properties
 
 # Firebase: each build uses its own project, see docs/firebase-setup.md

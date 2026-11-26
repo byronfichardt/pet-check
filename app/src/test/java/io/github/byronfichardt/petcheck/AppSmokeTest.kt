@@ -2,7 +2,7 @@ package io.github.byronfichardt.petcheck
 
 import android.Manifest
 import android.content.Intent
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -11,6 +11,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.byronfichardt.petcheck.data.SoundEvent
 import io.github.byronfichardt.petcheck.data.SoundType
 import io.github.byronfichardt.petcheck.monitor.MonitorService
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -30,19 +31,32 @@ import org.robolectric.annotation.Config
  * that the unit tests of individual pieces cannot.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [36])
+// The oldest Android the app supports, a middle one and the newest.
+@Config(sdk = [26, 30, 36])
 class AppSmokeTest {
     @get:Rule
     val compose = createAndroidComposeRule<MainActivity>()
 
     private val app get() = ApplicationProvider.getApplicationContext<PetCheckApp>()
 
+    /**
+     * Runs suspending work off the main thread and keeps the main thread turning while it waits.
+     * Blocking the main thread here (with runBlocking) can deadlock: the app's own start-up
+     * coroutines may be part-way through reading settings and need that thread to finish.
+     */
+    private fun <T> await(block: suspend () -> T): T {
+        val result = app.container.appScope.async { block() }
+        compose.waitUntil(20_000) { result.isCompleted }
+        return runBlocking { result.await() }
+    }
+
     @Test
     fun everyTabOpensAndALoggedSoundShowsUp() {
-        compose.onNodeWithText("Not listening").assertIsDisplayed()
-        compose.onNodeWithText("Start listening").assertIsDisplayed()
+        // Existence, not visibility: the simulated screen is small and can start scrolled.
+        compose.onNodeWithText("Not listening").assertExists()
+        compose.onNodeWithText("Start listening").assertExists()
 
-        runBlocking {
+        await {
             val settings = app.container.settings.current()
             assertTrue(settings.deviceId.isNotEmpty())
             app.container.events.upsert(
@@ -53,29 +67,31 @@ class AppSmokeTest {
         }
 
         compose.onNodeWithText("Activity").performClick()
-        compose.onNodeWithText("peak -12 dB").assertIsDisplayed()
+        // The row arrives from the database on a background thread.
+        compose.waitUntil(10_000) { compose.onAllNodes(hasText("peak -12 dB")).fetchSemanticsNodes().isNotEmpty() }
 
         compose.onNodeWithText("History").performClick()
-        compose.onNodeWithText("Noisy time by hour").assertIsDisplayed()
+        compose.onNodeWithText("Noisy time by hour").assertExists()
         compose.onNodeWithText("Month").performClick()
-        compose.onNodeWithText("Noisy time by day").assertIsDisplayed()
+        compose.onNodeWithText("Noisy time by day").assertExists()
 
         compose.onNodeWithText("Settings").performClick()
         // This build has no google-services.json, so the app must run as a standalone monitor.
         assertNull(app.container.remote)
-        compose.onNodeWithText("Remote viewing").assertIsDisplayed()
-        compose.onNodeWithText("Log other loud sounds").assertIsDisplayed()
+        compose.onNodeWithText("Remote viewing").assertExists()
+        compose.onNodeWithText("Log other loud sounds").assertExists()
     }
 
     @Test
-    fun settingsPersist() = runBlocking {
-        val store = app.container.settings
-        val id = store.current().deviceId
-        store.setSensitivity(80)
-        store.setDeviceName("  Kitchen tablet  ")
-        store.setAlertsEnabled(true)
-        val settings = store.settings.first()
-        assertEquals(id, settings.deviceId)
+    fun settingsPersist() {
+        val settings = await {
+            val store = app.container.settings
+            val id = store.current().deviceId
+            store.setSensitivity(80)
+            store.setDeviceName("  Kitchen tablet  ")
+            store.setAlertsEnabled(true)
+            store.settings.first().also { assertEquals(id, it.deviceId) }
+        }
         assertEquals(80, settings.sensitivity)
         assertEquals("Kitchen tablet", settings.deviceName)
         assertEquals(12.4, settings.detectorConfig.marginDb, 1e-9)

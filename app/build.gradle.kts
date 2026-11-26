@@ -1,3 +1,5 @@
+import java.time.Duration
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -23,9 +25,25 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    sourceSets {
+        // The on-device tests read the shared recordings in testdata/.
+        getByName("androidTest") {
+            assets.directories += "../testdata"
+        }
     }
 
     signingConfigs {
+        // Debug builds are signed with the key in the repository, so a build from any machine or
+        // from CI installs over the last one. That key is public: never use it for a real release.
+        getByName("debug") {
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         // Release signing is read from the environment, so no key ever lives in the repository.
         // See docs/releasing.md. Without it, release builds fall back to the debug key.
         val keystore = System.getenv("PETCHECK_KEYSTORE_FILE")
@@ -73,7 +91,11 @@ android {
         unitTests {
             // The screenshot tests render real Compose screens on the JVM with Robolectric.
             isIncludeAndroidResources = true
-            all { it.systemProperty("roborazzi.test.record", "true") }
+            all {
+                it.systemProperty("roborazzi.test.record", "true")
+                // A stuck test should fail the build, not hang it.
+                it.timeout.set(Duration.ofMinutes(15))
+            }
         }
     }
 }
@@ -118,4 +140,10 @@ dependencies {
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.compose.ui.test.junit4)
     debugImplementation(libs.compose.ui.test.manifest)
+
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.compose.ui.test.junit4)
 }

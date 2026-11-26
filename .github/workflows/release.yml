@@ -28,8 +28,12 @@ jobs:
       - name: Add the Firebase configuration, if one is provided
         if: env.GOOGLE_SERVICES_JSON != ''
         run: printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
-      - name: Prepare the signing key, if one is provided
-        if: env.PETCHECK_KEYSTORE_BASE64 != ''
+      - name: Require a private signing key
+        if: env.PETCHECK_KEYSTORE_BASE64 == ''
+        run: |
+          echo "::error::No signing key. A public release must not be signed with the shared debug key: add the secrets described in docs/releasing.md."
+          exit 1
+      - name: Prepare the signing key
         run: |
           printf '%s' "$PETCHECK_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "PETCHECK_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"

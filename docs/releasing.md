@@ -14,10 +14,12 @@ Bump `versionCode` and `versionName` in `app/build.gradle.kts` first.
 
 ## Signing
 
-Without any configuration the release APK is signed with the debug key. It installs, but
-Android will not treat a later build signed with a different key as an update of it.
+Debug builds are signed with `debug.keystore`, which is in the repository so that a build
+from any machine installs over the previous one. That key is public. It is fine for testing
+on your own devices, but anyone could sign a fake "update" with it, so a public release
+must use a private key. The release workflow refuses to run without one.
 
-For a stable identity, create a keystore once and keep it somewhere safe:
+Create a keystore once and keep it somewhere safe:
 
 ```bash
 keytool -genkeypair -v -keystore release.jks -alias petcheck -keyalg RSA -keysize 4096 -validity 10000
