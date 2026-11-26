@@ -53,17 +53,34 @@ control. Its security rules reject any record carrying fields other than these.
 
 ### Android
 
-You need JDK 21 and the Android SDK (Android Studio provides both).
+**Install a ready-made build.** Every CI run on GitHub produces a debug APK: open the latest
+run under the repository's **Actions** tab, download the `pet-check-debug-apk` artifact and
+unzip it. Copy the APK to the phone, open it, and allow your file manager or browser to
+install apps when Android asks.
+
+**Or build it yourself.** You need JDK 21 and the Android SDK (Android Studio provides both).
+With the phone connected by USB and USB debugging switched on:
 
 ```bash
 ./gradlew installDebug
 ```
 
-Open **Pet Check**, tap **Start listening**, and allow the microphone. Leave the device
-plugged in near your pet. Android 8.0 or newer is required.
+Then open **Pet Check**, tap **Start listening**, and allow the microphone. Android 8.0 or
+newer is required.
 
-The app asks to be excluded from battery optimisation. Allow it, otherwise Android may stop
-the monitor after a while with the screen off.
+#### Setting up a spare phone as the monitor
+
+- Keep it plugged in. Listening for hours drains a battery.
+- When the app asks to keep running in the background, tap **Allow**. Without that, Android
+  may stop the monitor some time after the screen turns off.
+- Some phone makers add their own battery savers on top of Android's (Xiaomi, Huawei,
+  OnePlus, Samsung and others). If the monitor stops overnight, look in the phone's battery
+  settings for an option to let Pet Check run unrestricted or auto-start.
+- Leave it within a few metres of where your pet spends its time, with the microphone
+  uncovered, and adjust **Sensitivity** on the Monitor screen until barks are logged and
+  everyday background noise is not.
+- If a call or another recording app takes the microphone, Pet Check shows a warning for as
+  long as it cannot hear anything.
 
 ### Remote viewing (optional)
 
@@ -87,8 +104,11 @@ A Pi with a USB microphone makes a good permanent monitor. See [pi/README.md](pi
 ## Development
 
 ```bash
-# Android: unit tests, screenshot tests and lint
+# Android: unit tests, screenshot tests, a smoke test of the whole app, and lint
 ./gradlew testDebugUnitTest lintDebug
+
+# Android, on a connected device or running emulator: the real sound model and microphone
+./gradlew connectedDebugAndroidTest
 
 # Raspberry Pi monitor
 cd pi && python3 -m unittest discover -s tests
@@ -104,7 +124,12 @@ The screenshot tests render every screen on the JVM and write the images to
 `app/build/outputs/screenshots`.
 
 The Android and Pi monitors implement the same detector. Both are tested against
-`testdata/detector_cases.txt`, so a change to one has to be made to the other.
+`testdata/detector_cases.txt` and both must hear the bark in `testdata/dog_bark.wav`, so a
+change to one has to be made to the other.
+
+Debug builds are signed with `debug.keystore` from the repository, so a build from any
+machine installs over the previous one. See [docs/releasing.md](docs/releasing.md) for why
+releases must not use that key.
 
 ## Status
 
